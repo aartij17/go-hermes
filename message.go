@@ -10,8 +10,13 @@ type Key struct {
 	State string    `json:"state"`
 }
 
+// -------------------------
+// Message types in Hermes protocol
 type Message struct {
 	Type string `json:"message_type"`
+	INV  *INV   `json:"inv_message,optional"`
+	ACK  *ACK   `json:"ack_message,optional"`
+	VAL  *VAL   `json:"val_message,optional"`
 }
 
 type INV struct {

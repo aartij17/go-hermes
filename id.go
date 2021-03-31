@@ -1,9 +1,9 @@
 package go_hermes
 
 import (
+	"go-hermes/log"
 	"strconv"
 	"strings"
-	"go-hermes/log"
 )
 
 // ID represents a generic identifier in format of Zone.Node

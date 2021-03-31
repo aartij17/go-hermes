@@ -1,5 +1,10 @@
 package go_hermes
 
+import (
+	"net/http"
+	"paxi"
+)
+
 type LiveNodes struct {
 	Nodes []string `json:"nodes"`
 }
@@ -10,9 +15,18 @@ type Metadata struct {
 	LiveNodes []*LiveNodes `json:"live_nodes"`
 }
 
-type Node struct {
-
-	Metadata Metadata `json:"metadata"`
+type Node interface {
+	Socket
+	Database
+	ID() ID
+	Run()
 }
 
-
+type node struct {
+	id ID
+	Socket
+	paxi.Database
+	MessageChan chan interface{}
+	server      *http.Server
+	Metadata    Metadata
+}
