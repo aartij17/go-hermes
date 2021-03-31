@@ -45,28 +45,3 @@ type Reply struct {
 func (r Reply) String() string {
 	return fmt.Sprintf("Reply {cmd=%v value=%x prop=%v}", r.Command, r.Value, r.Properties)
 }
-
-// -------------------------
-// Message types in Hermes protocol
-type Message struct {
-	Type string `json:"message_type"`
-	INV  *INV   `json:"inv_message,optional"`
-	ACK  *ACK   `json:"ack_message,optional"`
-	VAL  *VAL   `json:"val_message,optional"`
-}
-
-type INV struct {
-	Key      KeyStruct `json:"key"`
-	Epoch_id int       `json:"epoch_id"`
-	Value    string    `json:"value"`
-}
-
-type ACK struct {
-	Key      KeyStruct `json:"key"`
-	Epoch_id int       `json:"epoch_id"`
-}
-
-type VAL struct {
-	Key      KeyStruct `json:"key"`
-	Epoch_id int       `json:"epoch_id"`
-}

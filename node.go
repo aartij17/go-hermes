@@ -1,8 +1,10 @@
 package go_hermes
 
 import (
+	"go-hermes/log"
 	"net/http"
-	"paxi"
+	"reflect"
+	"sync"
 )
 
 type LiveNodes struct {
@@ -20,6 +22,7 @@ type Node interface {
 	Database
 	ID() ID
 	Run()
+	Register(m interface{}, f interface{})
 }
 
 type node struct {
@@ -29,6 +32,9 @@ type node struct {
 	MessageChan chan interface{}
 	server      *http.Server
 	Metadata    Metadata
+
+	sync.RWMutex
+	handles map[string]reflect.Value
 }
 
 func NewNode(id ID) Node {
@@ -49,4 +55,44 @@ func (n *node) Run() {
 	go n.handle()
 	go n.recv()
 	n.http()
+}
+
+func (n *node) Register(m interface{}, f interface{}) {
+	t := reflect.TypeOf(m)
+	fn := reflect.ValueOf(f)
+	if fn.Kind() != reflect.Func || fn.Type().NumIn() != 1 || fn.Type().In(0) != t {
+		panic("register handle function error")
+	}
+	n.handles[t.String()] = fn
+}
+
+func (n *node) recv() {
+	for {
+		m := n.Recv()
+		switch m := m.(type) {
+		case Request:
+			m.c = make(chan Reply, 1)
+			go func(r Request) {
+				n.Send(r.NodeID, <-r.c)
+			}(m)
+			n.MessageChan <- m
+			continue
+			//case Reply:
+			//	n.RLock()
+
+		}
+	}
+}
+
+func (n *node) handle() {
+	for {
+		msg := <-n.MessageChan
+		v := reflect.ValueOf(msg)
+		name := v.Type().String()
+		f, exists := n.handles[name]
+		if !exists {
+			log.Fatalf("no registered handle function for message type %v", name)
+		}
+		f.Call([]reflect.Value{v})
+	}
 }
