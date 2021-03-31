@@ -7,7 +7,8 @@ import (
 	"os"
 )
 
-var configFile = flag.String("config", "config.json", "Configuration file for hermes, defaults to config.json")
+var configFile = flag.String("config", "config.json",
+	"Configuration file for hermes, defaults to config.json")
 
 type Config struct {
 	Addrs     map[ID]string

@@ -21,7 +21,7 @@ func NewID(zone, node int) ID {
 	return ID(strconv.Itoa(zone) + "." + strconv.Itoa(node))
 }
 
-// Zone returns Zond ID component
+// Zone returns Zone ID component
 func (i ID) Zone() int {
 	if !strings.Contains(string(i), ".") {
 		log.Warningf("id %s does not contain \".\"\n", i)
@@ -55,8 +55,12 @@ func (i ID) Node() int {
 
 type IDs []ID
 
-func (a IDs) Len() int      { return len(a) }
-func (a IDs) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a IDs) Len() int {
+	return len(a)
+}
+func (a IDs) Swap(i, j int) {
+	a[i], a[j] = a[j], a[i]
+}
 func (a IDs) Less(i, j int) bool {
 	if a[i].Zone() < a[j].Zone() {
 		return true

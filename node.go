@@ -25,8 +25,28 @@ type Node interface {
 type node struct {
 	id ID
 	Socket
-	paxi.Database
+	Database
 	MessageChan chan interface{}
 	server      *http.Server
 	Metadata    Metadata
+}
+
+func NewNode(id ID) Node {
+	return &node{
+		id:          id,
+		Socket:      NewSocket(id, config.Addrs),
+		Database:    NewDatabase(),
+		MessageChan: make(chan interface{}),
+	}
+}
+
+func (n *node) ID() ID {
+	return n.id
+}
+
+func (n *node) Run() {
+	log.Infof("node %v start running", n.id)
+	go n.handle()
+	go n.recv()
+	n.http()
 }
