@@ -10,7 +10,7 @@ type Timestamp struct {
 	C_id    string `json:"coordinator_id"`
 }
 type KeyStruct struct {
-	Key   string    `json:"key"`
+	Key   int       `json:"key"`
 	Ts    Timestamp `json:"timestamp"`
 	State string    `json:"state"`
 }
@@ -19,6 +19,7 @@ type KeyStruct struct {
 // Client replica messages
 type Request struct {
 	Command    Command
+	Value      string
 	Properties map[string]string
 	Timestamp  int64
 	NodeID     ID

@@ -30,6 +30,12 @@ func (q *Quorum) Size() int {
 	return q.size
 }
 
+func (q *Quorum) Reset() {
+	q.size = 0
+	q.acks = make(map[ID]bool)
+	q.zones = make(map[int]int)
+}
+
 func (q *Quorum) All() bool {
 	return q.size == config.n
 }

@@ -28,7 +28,9 @@ func (r *Replica) handleRequest(m go_hermes.Request) {
 	log.Debugf("Replica %s received %v\n", r.ID(), m)
 
 	if m.Command.IsRead() {
-		v, inProgress := r.readInProgress(m)
+		// since this is a local read, read from the node that the client sent a request to,
+		// and return
+		v, _ := r.readInProgress(m)
 		reply := go_hermes.Reply{
 			Command:    m.Command,
 			Value:      v,
@@ -36,6 +38,7 @@ func (r *Replica) handleRequest(m go_hermes.Request) {
 			Timestamp:  time.Now().Unix(),
 		}
 		m.Reply(reply)
+		return
 	}
 	go r.Hermes.HandleRequest(m)
 }
