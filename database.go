@@ -38,7 +38,8 @@ func (c Command) IsWrite() bool {
 }
 
 func (c Command) Equal(a Command) bool {
-	return c.Key == a.Key && bytes.Equal(c.Value, a.Value) && c.ClientID == a.ClientID && c.CommandID == a.CommandID
+	return c.Key == a.Key && bytes.Equal(c.Value, a.Value) &&
+		c.ClientID == a.ClientID && c.CommandID == a.CommandID
 }
 
 func (c Command) String() string {
@@ -75,29 +76,6 @@ func NewDatabase() Database {
 		history:      make(map[Key][]Value),
 	}
 }
-
-/*
-// Execute implements StateMachine interface
-func (d *database) Execute(c interface{}) interface{} {
-	cmd, ok := c.(Command)
-	if !ok {
-		log.Error("cannot execute non command")
-	}
-	k := cmd.Key
-	v := cmd.Value
-	d.Lock()
-	defer d.Unlock()
-	if d.data[k] == nil {
-		d.data[k] = make([]Value, 0)
-	}
-	d.data[k] = append(d.data[k], v)
-	version := len(d.data[k])
-	if version < 2 {
-		return nil
-	}
-	return d.data[k][version-2]
-}
-*/
 
 // Execute executes a command agaist database
 func (d *database) Execute(c Command) Value {
@@ -159,26 +137,4 @@ func (d *database) String() string {
 	defer d.RUnlock()
 	b, _ := json.Marshal(d.data)
 	return string(b)
-}
-
-// Conflict checks if two commands are conflicting as reorder them will end in different states
-func Conflict(gamma *Command, delta *Command) bool {
-	if gamma.Key == delta.Key {
-		if !gamma.IsRead() || !delta.IsRead() {
-			return true
-		}
-	}
-	return false
-}
-
-// ConflictBatch checks if two batchs of commands are conflict
-func ConflictBatch(batch1 []Command, batch2 []Command) bool {
-	for i := 0; i < len(batch1); i++ {
-		for j := 0; j < len(batch2); j++ {
-			if Conflict(&batch1[i], &batch2[j]) {
-				return true
-			}
-		}
-	}
-	return false
 }

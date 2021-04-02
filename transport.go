@@ -79,7 +79,7 @@ type transport struct {
 }
 
 func (t *transport) Send(m interface{}) {
-	log.Info("sent from transport layer")
+	//log.Info("sent from transport layer")
 	t.send <- m
 }
 
