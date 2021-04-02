@@ -9,14 +9,14 @@ import (
 type Replica struct {
 	go_hermes.Node
 	*Hermes
-	Epoch_ID int
+	EpochId int
 }
 
 var replica Replica
 
 func NewReplica(id go_hermes.ID) *Replica {
 	r := new(Replica)
-	r.Epoch_ID = 0
+	r.EpochId = 0
 	r.Node = go_hermes.NewNode(id)
 	r.Hermes = NewHermes(r)
 	r.Register(go_hermes.Request{}, r.handleRequest)
@@ -28,8 +28,8 @@ func NewReplica(id go_hermes.ID) *Replica {
 
 func (r *Replica) handleRequest(m go_hermes.Request) {
 	log.Debugf("Replica %s received %v\n", r.ID(), m)
-	r.Epoch_ID += 1
-	r.Hermes.Epoch_ID = r.Epoch_ID
+	r.EpochId += 1
+	r.Hermes.EpochId = r.EpochId
 
 	if m.Command.IsRead() {
 		// since this is a local read, read from the node that the client sent a request to,
@@ -44,7 +44,7 @@ func (r *Replica) handleRequest(m go_hermes.Request) {
 		m.Reply(reply)
 		return
 	}
-	m.Epoch_ID = r.Epoch_ID
+	m.Epoch_ID = r.EpochId
 	go r.Hermes.HandleRequest(m)
 }
 

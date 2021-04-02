@@ -28,7 +28,6 @@ func (n *node) http() {
 	log.Fatal(n.server.ListenAndServe())
 }
 
-// TODO: Complete this method based on the algorithm
 func (n *node) handleRoot(w http.ResponseWriter, r *http.Request) {
 	var req Request
 	var cmd Command
