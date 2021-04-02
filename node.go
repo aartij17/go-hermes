@@ -43,6 +43,12 @@ func NewNode(id ID) Node {
 		Socket:      NewSocket(id, config.Addrs),
 		Database:    NewDatabase(),
 		MessageChan: make(chan interface{}),
+		Metadata: Metadata{
+			Lease:     true,
+			Epoch_id:  0,
+			LiveNodes: nil,
+		},
+		handles: make(map[string]reflect.Value),
 	}
 }
 
@@ -77,10 +83,16 @@ func (n *node) recv() {
 			}(m)
 			n.MessageChan <- m
 			continue
-			//case Reply:
-			//	n.RLock()
 
+		case Reply:
+			n.RLock()
+			//r := n.forwards[m.Command.String()]
+			log.Debugf("node %v received reply %v", n.id, m)
+			n.RUnlock()
+			//r.Reply(m)
+			continue
 		}
+		n.MessageChan <- m
 	}
 }
 
@@ -93,6 +105,8 @@ func (n *node) handle() {
 		if !exists {
 			log.Fatalf("no registered handle function for message type %v", name)
 		}
+		// increment the epoch ID for each request received by the node.
+		n.Metadata.Epoch_id += 1
 		f.Call([]reflect.Value{v})
 	}
 }

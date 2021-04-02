@@ -6,13 +6,19 @@ import (
 )
 
 type Timestamp struct {
-	Version int    `json:"version"`
-	C_id    string `json:"coordinator_id"`
+	Version int `json:"version"`
+	C_id    ID  `json:"coordinator_id"`
 }
+
 type KeyStruct struct {
-	Key   int       `json:"key"`
+	Key   Key       `json:"key"`
 	Ts    Timestamp `json:"timestamp"`
 	State string    `json:"state"`
+	Value string    `json:"value"`
+}
+
+func (m KeyStruct) String() string {
+	return fmt.Sprintf("KeyStruct {Key=%v Ts=(%v) value=%v State=%v}", m.Key, m.Ts, m.Value, m.State)
 }
 
 //--------------------------
@@ -24,6 +30,8 @@ type Request struct {
 	Timestamp  int64
 	NodeID     ID
 	c          chan Reply
+	KeyStruct  *KeyStruct
+	Epoch_ID   int
 }
 
 func (r *Request) Reply(reply Reply) {
@@ -37,7 +45,7 @@ func (r Request) String() string {
 
 type Reply struct {
 	Command    Command
-	Value      Value
+	Value      string
 	Properties map[string]string
 	Timestamp  int64
 	Err        error

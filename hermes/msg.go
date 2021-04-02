@@ -21,17 +21,20 @@ type Message struct {
 }
 
 type INV struct {
-	Key      go_hermes.KeyStruct `json:"key"`
-	Epoch_id int                 `json:"epoch_id"`
-	Value    string              `json:"value"`
+	Key        *go_hermes.KeyStruct `json:"key"`
+	Epoch_id   int                  `json:"epoch_id"`
+	Value      string               `json:"value"`
+	FromNodeID go_hermes.ID
 }
 
 type ACK struct {
-	Key      go_hermes.KeyStruct `json:"key"`
-	Epoch_id int                 `json:"epoch_id"`
+	Key        *go_hermes.KeyStruct `json:"key"`
+	Epoch_id   int                  `json:"epoch_id"`
+	FromNodeID go_hermes.ID
 }
 
 type VAL struct {
-	Key      go_hermes.KeyStruct `json:"key"`
-	Epoch_id int                 `json:"epoch_id"`
+	Key        *go_hermes.KeyStruct `json:"key"`
+	Epoch_id   int                  `json:"epoch_id"`
+	FromNodeID go_hermes.ID
 }

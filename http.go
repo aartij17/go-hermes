@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 )
@@ -13,6 +14,18 @@ import (
 func (n *node) http() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", n.handleRoot)
+
+	url, err := url.Parse(config.HTTPAddrs[n.id])
+	if err != nil {
+		log.Fatal("http url parse error: ", err)
+	}
+	port := ":" + url.Port()
+	n.server = &http.Server{
+		Addr:    port,
+		Handler: mux,
+	}
+	log.Info("http server starting on ", port)
+	log.Fatal(n.server.ListenAndServe())
 }
 
 // TODO: Complete this method based on the algorithm

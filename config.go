@@ -11,9 +11,9 @@ var configFile = flag.String("config", "config.json",
 	"Configuration file for hermes, defaults to config.json")
 
 type Config struct {
-	Addrs     map[ID]string
-	HTTPAddrs map[ID]string
-	MLT       int
+	Addrs     map[ID]string `json:"address"`
+	HTTPAddrs map[ID]string `json:"http_address"`
+	MLT       int           `json:"mlt"`
 
 	n   int         // total number of nodes
 	npz map[int]int // nodes per zone

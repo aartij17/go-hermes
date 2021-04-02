@@ -8,8 +8,9 @@ type Quorum struct {
 
 func NewQuorum() *Quorum {
 	q := &Quorum{
-		size: 0,
-		acks: make(map[ID]bool),
+		size:  0,
+		acks:  make(map[ID]bool),
+		zones: make(map[int]int),
 	}
 	return q
 }

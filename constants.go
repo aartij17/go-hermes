@@ -10,4 +10,5 @@ const (
 	INVALID_STATE = "invalid"
 	VALID_STATE   = "valid"
 	TRANS_STATE   = "trans"
+	REPLAY_STATE  = "replay"
 )
