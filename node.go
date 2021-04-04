@@ -1,6 +1,7 @@
 package go_hermes
 
 import (
+	"go-hermes/hman"
 	"go-hermes/log"
 	"net/http"
 	"reflect"
@@ -35,6 +36,7 @@ type node struct {
 
 	sync.RWMutex
 	handles map[string]reflect.Value
+	HMan    *hman.HMan
 }
 
 func NewNode(id ID) Node {
@@ -49,9 +51,13 @@ func NewNode(id ID) Node {
 			LiveNodes: nil,
 		},
 		handles: make(map[string]reflect.Value),
+		HMan:    hman.NewHMan(id, config.Addrs),
 	}
 }
 
+func (n *node) startHMan() {
+	n.HMan.HManFly()
+}
 func (n *node) ID() ID {
 	return n.id
 }
@@ -60,6 +66,7 @@ func (n *node) Run() {
 	log.Infof("node %v start running", n.id)
 	go n.handle()
 	go n.recv()
+	go n.startHMan()
 	n.http()
 }
 

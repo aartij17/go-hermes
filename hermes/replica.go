@@ -2,6 +2,7 @@ package hermes
 
 import (
 	go_hermes "go-hermes"
+	"go-hermes/hman"
 	"go-hermes/log"
 	"time"
 )
@@ -10,6 +11,8 @@ type Replica struct {
 	go_hermes.Node
 	*Hermes
 	EpochId int
+
+	hman.HMan
 }
 
 var replica Replica
@@ -19,10 +22,16 @@ func NewReplica(id go_hermes.ID) *Replica {
 	r.EpochId = 0
 	r.Node = go_hermes.NewNode(id)
 	r.Hermes = NewHermes(r)
+
 	r.Register(go_hermes.Request{}, r.handleRequest)
 	r.Register(ACK{}, r.HandleACK)
 	r.Register(INV{}, r.HandleINV)
 	r.Register(VAL{}, r.HandleVAL)
+
+	r.Register(hman.Beat{}, r.HandleBeat)
+	r.Register(hman.BeatACK{}, r.HandleBeatACK)
+	r.Register(hman.BeatDecide{}, r.HandleBeatDecide)
+
 	return r
 }
 
