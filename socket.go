@@ -44,12 +44,12 @@ func (s *socket) Send(to ID, m interface{}) {
 		s.lock.RUnlock()
 		if !OK {
 			log.Errorf("socket does not have address of node %s", to)
-			return
+			//return errors.New("socket does not have address of node")
 		}
 		t = NewTransport(address)
 		err := Retry(t.Dial, 100, time.Duration(50)*time.Millisecond)
 		if err != nil {
-			panic(err)
+			return
 		}
 		s.lock.Lock()
 		s.nodes[to] = t
