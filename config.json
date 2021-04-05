@@ -9,6 +9,7 @@
     "1.2": "http://127.0.0.1:9091",
     "1.3": "http://127.0.0.1:9092"
   },
+  "heartbeat_interval": 80,
   "mlt": 7,
   "failure_mlt": 2
 }

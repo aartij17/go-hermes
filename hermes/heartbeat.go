@@ -94,11 +94,11 @@ func (hman *HMan) processFailureTimeout(epochNum int) {
 }
 
 func (hman *HMan) hmanMltHandler(epochNum int) {
-	log.Debugf("[HMAN]: starting hman mlt handler for epoch: %v", epochNum)
+	//log.Debugf("[HMAN]: starting hman mlt handler for epoch: %v", epochNum)
 	for {
 		select {
 		case <-hman.EntryMap[epochNum].timer.C:
-			log.Infof("[HMAN]: failure time out for epoch: %d", epochNum)
+			//log.Infof("[HMAN]: failure time out for epoch: %d", epochNum)
 			hman.EntryMap[epochNum].timedOut = true
 			hman.processFailureTimeout(epochNum)
 			break
@@ -129,7 +129,7 @@ func (hman *HMan) sendbeats() {
 
 func (hman *HMan) HManFly() {
 	if hman.id.Node() == 1 && hman.id.Zone() == 1 {
-		hman.ticker = time.NewTicker(time.Duration(go_hermes.GetConfig().MLT) * time.Second)
+		hman.ticker = time.NewTicker(time.Duration(go_hermes.GetConfig().HeartbeatInterval) * time.Second)
 		for {
 			select {
 			case <-hman.ticker.C:
@@ -152,7 +152,7 @@ func (hman *HMan) HandleBeat(m Beat) {
 }
 
 func (hman *HMan) HandleBeatACK(m BeatACK) {
-
+	log.Debugf("[HandleBeatACK]: trying to take a lock")
 	hman.LiveNodeLock.Lock()
 	defer hman.LiveNodeLock.Unlock()
 	log.Debugf("[HMAN] received BeatACK from node %v, epoch: %v", m.FromNode, m.BallotNum.EpochNum)
@@ -172,8 +172,8 @@ func (hman *HMan) HandleBeatACK(m BeatACK) {
 
 		// check if the time out has occurred already for this
 		if hman.EntryMap[m.BallotNum.EpochNum].timedOut {
-			log.Debugf("[HMAN]: Looks like epoch %v is timeout", m.BallotNum.EpochNum)
-			log.Debugf("[HMAN]: Responded nodes: %v", hman.EntryMap[hman.BallotNum.EpochNum].respondedNodes)
+			//log.Debugf("[HMAN]: Looks like epoch %v is timeout", m.BallotNum.EpochNum)
+			//log.Debugf("[HMAN]: Responded nodes: %v", hman.EntryMap[hman.BallotNum.EpochNum].respondedNodes)
 			// add all the nodes which responded with an ACK to the list of live nodes
 			for n := range hman.EntryMap[m.BallotNum.EpochNum].respondedNodes {
 				liveNodes = append(liveNodes, n)
@@ -194,8 +194,8 @@ func (hman *HMan) HandleBeatACK(m BeatACK) {
 			// now its not in progress anymore
 			hman.InProgress = false
 		} else {
-			log.Debugf("[HMAN]: Epoch %v is not timed out yet!", m.BallotNum.EpochNum)
-			log.Debugf("[HMAN]: current responded nodes: %v", hman.EntryMap[m.BallotNum.EpochNum].respondedNodes)
+			log.Debugf("[HMAN]: Epoch %v is not timed out yet, current responded nodes: %v",
+				m.BallotNum.EpochNum, hman.EntryMap[m.BallotNum.EpochNum].respondedNodes)
 		}
 	} else {
 		log.Debugf("[HMAN]: not in progress")

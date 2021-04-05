@@ -40,3 +40,7 @@ func (q *Quorum) Reset() {
 func (q *Quorum) All() bool {
 	return q.size == config.n
 }
+
+func (q *Quorum) AllFromViewManagement(livenodes []ID) bool {
+	return q.size >= len(livenodes)
+}

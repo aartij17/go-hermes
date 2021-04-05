@@ -9,6 +9,7 @@ import (
 type Socket interface {
 	Send(to ID, m interface{})
 	Broadcast(m interface{})
+	BroadcastToLiveNodes(m interface{}, ids []ID)
 	Recv() interface{}
 	Close()
 }
@@ -70,6 +71,15 @@ func (s *socket) Recv() interface{} {
 
 func (s *socket) Broadcast(m interface{}) {
 	for id := range s.addresses {
+		if id == s.id {
+			continue
+		}
+		s.Send(id, m)
+	}
+}
+
+func (s *socket) BroadcastToLiveNodes(m interface{}, ids []ID) {
+	for _, id := range ids {
 		if id == s.id {
 			continue
 		}
