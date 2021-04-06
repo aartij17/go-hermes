@@ -44,7 +44,7 @@ func NewNode(id ID) Node {
 		id:          id,
 		Socket:      NewSocket(id, config.Addrs),
 		Database:    NewDatabase(),
-		MessageChan: make(chan interface{}),
+		MessageChan: make(chan interface{}, config.ChanBufferSize),
 		Metadata: Metadata{
 			Lease:     true,
 			Epoch_id:  0,
@@ -106,7 +106,13 @@ func (n *node) recv() {
 func (n *node) handle() {
 	for {
 		msg := <-n.MessageChan
+		if msg == nil {
+			log.Debugf("empty message received")
+			continue
+		}
+		//log.Debug(msg)
 		v := reflect.ValueOf(msg)
+		//log.Debug(v)
 		name := v.Type().String()
 		f, exists := n.handles[name]
 		if !exists {

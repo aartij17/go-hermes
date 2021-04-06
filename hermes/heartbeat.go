@@ -22,7 +22,7 @@ type HMan struct {
 	config go_hermes.Config
 	quorum *go_hermes.Quorum
 	ticker *time.Ticker
-
+	go_hermes.Socket
 	LiveNodeLock sync.RWMutex
 	LiveNodes    []go_hermes.ID
 	BallotNum    *ballotNum
@@ -44,7 +44,8 @@ Every node will have another process running calling the HMan.
 func NewHMan(n go_hermes.Node, options ...func(*Hermes)) *HMan {
 	Hman = &HMan{
 		//Socket:    go_hermes.NewSocket(id, addrs),
-		Node:      n,
+		Node: n,
+		//Socket:    go_hermes.NewSocket(n.ID(), go_hermes.GetConfig().Addrs),
 		id:        n.ID(),
 		quorum:    go_hermes.NewQuorum(),
 		LiveNodes: make([]go_hermes.ID, 0),
@@ -55,6 +56,7 @@ func NewHMan(n go_hermes.Node, options ...func(*Hermes)) *HMan {
 		InProgress: false,
 		EntryMap:   make(map[int]*HManEntry),
 	}
+
 	for node_addr := range go_hermes.GetConfig().Addrs {
 		if node_addr == n.ID() {
 			continue
@@ -76,7 +78,7 @@ func (hman *HMan) processFailureTimeout(epochNum int) {
 		liveNodes = append(liveNodes, n)
 	}
 	for n := range hman.EntryMap[epochNum].respondedNodes {
-		hman.Send(n, BeatDecide{
+		hman.Node.Send(n, BeatDecide{
 			FromNode: hman.id,
 			ToNode:   n,
 			NodeList: liveNodes,
@@ -124,7 +126,7 @@ func (hman *HMan) sendbeats() {
 	}
 	go hman.hmanMltHandler(hman.BallotNum.EpochNum)
 	log.Debugf("[HMAN]: Broadcasting heartbeats")
-	hman.Broadcast(beat)
+	hman.Node.Broadcast(beat)
 }
 
 func (hman *HMan) HManFly() {
@@ -144,7 +146,7 @@ func (hman *HMan) HManFly() {
 
 func (hman *HMan) HandleBeat(m Beat) {
 	log.Debugf("[HMAN] Node %v received beat", hman.id)
-	hman.Send(m.FromNode, BeatACK{
+	hman.Node.Send(m.FromNode, BeatACK{
 		FromNode:  hman.id,
 		ToNode:    m.FromNode,
 		BallotNum: m.BallotNum,
@@ -181,7 +183,7 @@ func (hman *HMan) HandleBeatACK(m BeatACK) {
 			// send this newly created list of live nodes in a BeatDecide message
 			// only to those nodes who responded with a BeatACK
 			for n := range hman.EntryMap[m.BallotNum.EpochNum].respondedNodes {
-				hman.Send(n, BeatDecide{
+				hman.Node.Send(n, BeatDecide{
 					FromNode:  hman.id,
 					ToNode:    m.FromNode,
 					NodeList:  liveNodes,

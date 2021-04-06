@@ -2,10 +2,12 @@ package go_hermes
 
 import (
 	"fmt"
+	"go-hermes/log"
 	"time"
 )
 
 func Retry(f func() error, attempts int, sleep time.Duration) error {
+	log.Debugf("Dial send retry")
 	var err error
 	for i := 0; ; i++ {
 		err = f()

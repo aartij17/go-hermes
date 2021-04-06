@@ -100,9 +100,9 @@ func (h *Hermes) CheckKeyState(r go_hermes.Request) (*go_hermes.KeyStruct, bool)
 }
 
 func (h *Hermes) broadcastRequest(r go_hermes.Request) {
+	log.Debugf("waiting for lock")
 	h.entryLock.Lock()
-	defer h.entryLock.Unlock()
-
+	log.Debugf("lock taken")
 	h.quorum.Reset()
 	h.quorum.ACK(h.ID())
 
@@ -111,25 +111,34 @@ func (h *Hermes) broadcastRequest(r go_hermes.Request) {
 		Request:   r,
 		MltTicker: time.NewTicker(time.Duration(h.config.MLT) * time.Second),
 	}
-	go h.coordinatorTicker(r, r.Epoch_ID)
+	h.entryLock.Unlock()
+	log.Debugf("lock released")
+
+	INV_message := INV{
+		Key:        r.KeyStruct,
+		Epoch_id:   r.Epoch_ID,
+		Value:      r.Value,
+		FromNodeID: h.Node.ID(),
+	}
+	go h.coordinatorTicker(INV_message, r.Epoch_ID, r)
 	h.entryLog[r.Epoch_ID].Quorum.ACK(h.ID())
 
 	h.HermesKeys[int(r.Command.Key)] = r.KeyStruct
-	log.Info(h.HermesKeys)
+	//log.Info(h.HermesKeys)
 	log.Info("Broadcasting INV")
 	h.Broadcast(INV{
 		Key:        r.KeyStruct,
 		Epoch_id:   r.Epoch_ID,
 		Value:      r.Value,
 		FromNodeID: h.Node.ID(),
-	})
+	}) //, Hman.LiveNodes)
 }
 
 func (h *Hermes) HandleACK(m ACK) {
 	// TODO: Contact membership service for all live replicas
-	h.entryLock.RLock()
+	h.entryLock.Lock()
 	_, exists := h.entryLog[m.Epoch_id]
-	h.entryLock.RUnlock()
+	h.entryLock.Unlock()
 
 	if exists {
 		h.entryLog[m.Epoch_id].Quorum.ADD()
@@ -228,13 +237,20 @@ func (h *Hermes) isRecvdTimestampGreater(m *go_hermes.KeyStruct) bool {
 }
 
 //// Ticker functions for message losses
-func (h *Hermes) coordinatorTicker(r go_hermes.Request, epochId int) {
+func (h *Hermes) coordinatorTicker(msg INV, epochId int, r go_hermes.Request) {
 	for {
 		select {
 		case <-h.entryLog[epochId].MltTicker.C:
 			// ticker went off, which means there is a loss of message somewhere. Retrigger
 			// the write once again
-			h.broadcastRequest(r)
+			h.entryLog[r.Epoch_ID] = &Entry{
+				Quorum:    go_hermes.NewQuorum(),
+				Request:   r,
+				MltTicker: time.NewTicker(time.Duration(h.config.MLT) * time.Second),
+			}
+			h.entryLog[r.Epoch_ID].Quorum.ACK(h.ID())
+			h.HermesKeys[int(r.Command.Key)] = r.KeyStruct
+			h.Broadcast(msg)
 		}
 	}
 }
@@ -243,18 +259,24 @@ func (h *Hermes) followerTicker(m INV) {
 	for {
 		select {
 		case <-h.entryLog[m.Epoch_id].MltTicker.C:
+			if h.Node.IsCrashed() {
+				log.Debugf("its a crashed node, no need to replay")
+				h.entryLog[m.Epoch_id].MltTicker.Stop()
+				delete(h.entryLog, m.Epoch_id)
+				return
+			}
 			log.Infof("Follower ticker for node %v timed out, changing to replay state",
 				h.Node.ID())
 			h.entryLock.Lock()
 			h.HermesKeys[int(m.Key.Key)].State = go_hermes.REPLAY_STATE
 			//h.changeKeyState(int(m.Key.Key), go_hermes.REPLAY_STATE)
 			h.entryLock.Unlock()
-			h.BroadcastToLiveNodes(INV{
+			h.Broadcast(INV{
 				Key:        m.Key,
 				Epoch_id:   m.Epoch_id,
 				Value:      m.Value,
 				FromNodeID: h.Node.ID(),
-			}, Hman.LiveNodes)
+			}) //, Hman.LiveNodes)
 			// don't stop the ticker here, cause we need to keep checking if there are any failures
 			// once again
 		}
