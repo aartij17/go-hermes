@@ -12,6 +12,7 @@ type Replica struct {
 	EpochId int
 
 	*HMan
+	IsShadow bool
 }
 
 var replica Replica
@@ -21,7 +22,7 @@ func NewReplica(id go_hermes.ID) *Replica {
 	r.EpochId = 0
 	r.Node = go_hermes.NewNode(id)
 	r.Hermes = NewHermes(r)
-
+	r.IsShadow = false
 	r.Register(go_hermes.Request{}, r.handleRequest)
 	r.Register(ACK{}, r.HandleACK)
 	r.Register(INV{}, r.HandleINV)

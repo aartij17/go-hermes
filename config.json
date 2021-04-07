@@ -9,10 +9,29 @@
     "1.2": "http://127.0.0.1:9091",
     "1.3": "http://127.0.0.1:9092"
   },
-  "heartbeat_address" : {
+  "heartbeat_address": {
     "1:1": "tcp://127.0.0.1:7070",
     "1:2": "tcp://127.0.0.1:7071",
     "1:3": "tcp://127.0.0.1:7072"
+  },
+  "benchmark": {
+    "T": 60,
+    "N": 0,
+    "K": 1000,
+    "W": 0.5,
+    "Throttle": 1000,
+    "Concurrency": 1,
+    "Distribution": "uniform",
+    "LinearizabilityCheck": false,
+    "Conflicts": 0,
+    "Min": 0,
+    "Mu": 500,
+    "Sigma": 50,
+    "Move": false,
+    "Speed": 10,
+    "Zipfian_s": 2,
+    "Zipfian_v": 1,
+    "Lambda": 0.01
   },
   "heartbeat_interval": 20,
   "chan_buffer_size": 1024,

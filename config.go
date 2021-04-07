@@ -14,10 +14,11 @@ type Config struct {
 	Addrs     map[ID]string `json:"address"`
 	HTTPAddrs map[ID]string `json:"http_address"`
 	//HeartbeatAddrs    map[ID]string `json:"heartbeat_address"`
-	MLT               int `json:"mlt"`
-	FailureMLT        int `json:"failure_mlt"`
-	HeartbeatInterval int `json:"heartbeat_interval"`
-	ChanBufferSize    int `json:"chan_buffer_size"` // buffer size for channels
+	MLT               int     `json:"mlt"`
+	FailureMLT        int     `json:"failure_mlt"`
+	HeartbeatInterval int     `json:"heartbeat_interval"`
+	ChanBufferSize    int     `json:"chan_buffer_size"` // buffer size for channels
+	Benchmark         Bconfig `json:"benchmark"`
 
 	n   int         // total number of nodes
 	npz map[int]int // nodes per zone

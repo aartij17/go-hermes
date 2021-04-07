@@ -26,6 +26,7 @@ type Hermes struct {
 	HermesKeys      map[int]*go_hermes.KeyStruct
 	ReplyWhenCommit bool // use for optimisation
 	EpochId         int
+	timestamp       go_hermes.Timestamp
 }
 
 func NewHermes(n go_hermes.Node, options ...func(*Hermes)) *Hermes {
@@ -38,6 +39,7 @@ func NewHermes(n go_hermes.Node, options ...func(*Hermes)) *Hermes {
 		entryLog:        make(map[int]*Entry),
 		HermesKeys:      make(map[int]*go_hermes.KeyStruct),
 		config:          go_hermes.GetConfig(),
+		timestamp:       go_hermes.Timestamp{},
 	}
 	for _, opt := range options {
 		opt(h)

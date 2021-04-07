@@ -114,7 +114,7 @@ func (s *socket) IsCrashed() bool {
 }
 
 func (s *socket) Crash(t int) {
-	log.Infof("CRASHING")
+	log.Infof("Crash")
 	s.crash = true
 	if t > 0 {
 		timer := time.NewTimer(time.Duration(t) * time.Second)
