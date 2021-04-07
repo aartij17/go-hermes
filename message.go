@@ -37,6 +37,7 @@ type Request struct {
 func (r *Request) Reply(reply Reply) {
 	log.Info("sending reply back to the http client")
 	r.c <- reply
+	log.Debugf("unlocked from the r.c reply channel passing")
 }
 
 func (r Request) String() string {

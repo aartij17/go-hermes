@@ -10,6 +10,8 @@ type Replica struct {
 	go_hermes.Node
 	*Hermes
 	EpochId int
+
+	*HMan
 }
 
 var replica Replica
@@ -19,10 +21,18 @@ func NewReplica(id go_hermes.ID) *Replica {
 	r.EpochId = 0
 	r.Node = go_hermes.NewNode(id)
 	r.Hermes = NewHermes(r)
+
 	r.Register(go_hermes.Request{}, r.handleRequest)
 	r.Register(ACK{}, r.HandleACK)
 	r.Register(INV{}, r.HandleINV)
 	r.Register(VAL{}, r.HandleVAL)
+
+	r.HMan = NewHMan(r)
+	r.Register(Beat{}, r.HandleBeat)
+	r.Register(BeatACK{}, r.HandleBeatACK)
+	r.Register(BeatDecide{}, r.HandleBeatDecide)
+	go r.HMan.HManFly()
+
 	return r
 }
 
@@ -49,8 +59,9 @@ func (r *Replica) handleRequest(m go_hermes.Request) {
 }
 
 func (r *Replica) readInProgress(m go_hermes.Request) (go_hermes.Value, bool) {
-	state, exists := r.Hermes.CheckKeyState(m)
-	if exists && state == go_hermes.VALID_STATE {
+	key, exists := r.Hermes.CheckKeyState(m)
+	if exists && key.State == go_hermes.VALID_STATE {
+		log.Info(r.HermesKeys)
 		return []byte(r.HermesKeys[int(m.Command.Key)].Value), false
 	} else if exists {
 		log.Infof("key %v exists but not in VALID state", m.Command.Key)

@@ -1,6 +1,7 @@
 package go_hermes
 
 import (
+	//"go-hermes/hermes"
 	"go-hermes/log"
 	"net/http"
 	"reflect"
@@ -35,6 +36,7 @@ type node struct {
 
 	sync.RWMutex
 	handles map[string]reflect.Value
+	//HMan    *hermes.HMan
 }
 
 func NewNode(id ID) Node {
@@ -42,15 +44,20 @@ func NewNode(id ID) Node {
 		id:          id,
 		Socket:      NewSocket(id, config.Addrs),
 		Database:    NewDatabase(),
-		MessageChan: make(chan interface{}),
+		MessageChan: make(chan interface{}, config.ChanBufferSize),
 		Metadata: Metadata{
 			Lease:     true,
 			Epoch_id:  0,
 			LiveNodes: nil,
 		},
 		handles: make(map[string]reflect.Value),
+		//HMan:    hermes.NewHMan(id, config.Addrs),
 	}
 }
+
+//func (n *node) startHMan() {
+//	n.HMan.HManFly()
+//}
 
 func (n *node) ID() ID {
 	return n.id
@@ -99,7 +106,13 @@ func (n *node) recv() {
 func (n *node) handle() {
 	for {
 		msg := <-n.MessageChan
+		if msg == nil {
+			log.Debugf("empty message received")
+			continue
+		}
+		//log.Debug(msg)
 		v := reflect.ValueOf(msg)
+		//log.Debug(v)
 		name := v.Type().String()
 		f, exists := n.handles[name]
 		if !exists {

@@ -47,8 +47,8 @@ func NewTransport(addr string) Transport {
 
 	transport := &transport{
 		uri:   uri,
-		send:  make(chan interface{}), // config.ChanBufferSize),
-		recv:  make(chan interface{}), // config.ChanBufferSize),
+		send:  make(chan interface{}, config.ChanBufferSize),
+		recv:  make(chan interface{}, config.ChanBufferSize),
 		close: make(chan struct{}),
 	}
 
@@ -81,6 +81,7 @@ type transport struct {
 func (t *transport) Send(m interface{}) {
 	//log.Info("sent from transport layer")
 	t.send <- m
+	log.Debug("SENT!")
 }
 
 func (t *transport) Recv() interface{} {
@@ -102,18 +103,23 @@ func (t *transport) Dial() error {
 		return err
 	}
 
-	go func(conn net.Conn) {
+	go func(conn net.Conn, t *transport) {
 		// w := bufio.NewWriter(conn)
 		// codec := NewCodec(config.Codec, conn)
-		encoder := gob.NewEncoder(conn)
-		defer conn.Close()
-		for m := range t.send {
-			err := encoder.Encode(&m)
-			if err != nil {
-				log.Error(err)
+		for {
+			encoder := gob.NewEncoder(conn)
+			defer conn.Close()
+			for m := range t.send {
+				err := encoder.Encode(&m)
+				if err != nil {
+					log.Errorf("%v: Reconnecting....", err)
+					conn, err = net.Dial(t.Scheme(), t.uri.Host)
+					break
+				}
+				log.Debugf("sent by gob encoder")
 			}
 		}
-	}(conn)
+	}(conn, t)
 
 	return nil
 }
@@ -133,7 +139,6 @@ func (t *tcp) Listen() {
 	}
 
 	go func(listener net.Listener) {
-		defer listener.Close()
 		for {
 			conn, err := listener.Accept()
 			if err != nil {
@@ -156,14 +161,14 @@ func (t *tcp) Listen() {
 						if err != nil {
 							log.Error(err)
 							log.Error("this is where I changed stuff!")
-							return //aarti change
 							//continue
+							t.close <- struct{}{}
+							return
 						}
 						t.recv <- m
 					}
 				}
 			}(conn)
-
 		}
 	}(listener)
 }
@@ -266,7 +271,7 @@ func (c *channel) Dial() error {
 func (c *channel) Listen() {
 	chansLock.Lock()
 	defer chansLock.Unlock()
-	chans[c.uri.Host] = make(chan interface{}) //, config.ChanBufferSize)
+	chans[c.uri.Host] = make(chan interface{}, config.ChanBufferSize)
 	go func(conn <-chan interface{}) {
 		for {
 			select {
