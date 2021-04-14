@@ -13,9 +13,9 @@ type Client struct {
 	//ballot paxi.Ballot
 }
 
-func NewClient(id go_hermes.ID) *Client {
+func NewClient(id go_hermes.ID, zone int) *Client {
 	return &Client{
-		HTTPClient: go_hermes.NewHTTPClient(id),
+		HTTPClient: go_hermes.NewHTTPClient(id, zone),
 	}
 }
 

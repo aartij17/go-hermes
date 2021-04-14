@@ -35,19 +35,20 @@ type HTTPClient struct {
 	ID     ID  // client id use the same id as servers in local site
 	N      int // total number of nodes
 	LocalN int // number of nodes in local zone
-
+	Zone int
 	CID int // command id
 	*http.Client
 }
 
 // NewHTTPClient creates a new Client from config
-func NewHTTPClient(id ID) *HTTPClient {
+func NewHTTPClient(id ID, zone int) *HTTPClient {
 	c := &HTTPClient{
 		ID:     id,
 		N:      len(config.Addrs),
 		Addrs:  config.Addrs,
 		HTTP:   config.HTTPAddrs,
 		Client: &http.Client{},
+		Zone: zone,
 	}
 	if id != "" {
 		i := 0
@@ -79,13 +80,22 @@ func (c *HTTPClient) Put(key Key, value Value) error {
 }
 
 func (c *HTTPClient) GetURL(id ID, key Key) string {
+
+	//if id == "" {
+	//	for id = range c.HTTP {
+	//		if c.ID == "" || id.Zone() == c.ID.Zone() {
+	//			break
+	//		}
+	//	}
+	//}
 	if id == "" {
 		for id = range c.HTTP {
-			if c.ID == "" || id.Zone() == c.ID.Zone() {
+			if c.ID == "" && id.Zone() == c.Zone {
 				break
 			}
 		}
 	}
+	log.Debugf("returning URL:: %v", id)
 	return c.HTTP[id] + "/" + strconv.Itoa(int(key))
 }
 
@@ -94,7 +104,7 @@ func (c *HTTPClient) GetURL(id ID, key Key) string {
 func (c *HTTPClient) rest(id ID, key Key, value Value) (Value, map[string]string, error) {
 	// get url
 	url := c.GetURL(id, key)
-
+	//log.Infof("value to be sent: %v", value)
 	method := http.MethodGet
 	var body io.Reader
 	if value != nil {

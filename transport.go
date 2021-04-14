@@ -81,7 +81,6 @@ type transport struct {
 func (t *transport) Send(m interface{}) {
 	//log.Info("sent from transport layer")
 	t.send <- m
-	log.Debug("SENT!")
 }
 
 func (t *transport) Recv() interface{} {
@@ -108,7 +107,7 @@ func (t *transport) Dial() error {
 		// codec := NewCodec(config.Codec, conn)
 		for {
 			encoder := gob.NewEncoder(conn)
-			defer conn.Close()
+			//defer conn.Close()
 			for m := range t.send {
 				err := encoder.Encode(&m)
 				if err != nil {

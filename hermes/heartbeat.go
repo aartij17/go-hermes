@@ -58,9 +58,9 @@ func NewHMan(n go_hermes.Node, options ...func(*Hermes)) *HMan {
 	}
 
 	for node_addr := range go_hermes.GetConfig().Addrs {
-		if node_addr == n.ID() {
-			continue
-		}
+		//if node_addr == n.ID() {
+		//	continue
+		//}
 		Hman.LiveNodes = append(Hman.LiveNodes, node_addr)
 	}
 	return Hman
@@ -78,7 +78,7 @@ func (hman *HMan) processFailureTimeout(epochNum int) {
 		liveNodes = append(liveNodes, n)
 	}
 	for n := range hman.EntryMap[epochNum].respondedNodes {
-		hman.Node.Send(n, BeatDecide{
+		hman.Node.Send(hman.Node.ID(), n, BeatDecide{
 			FromNode: hman.id,
 			ToNode:   n,
 			NodeList: liveNodes,
@@ -126,7 +126,7 @@ func (hman *HMan) sendbeats() {
 	}
 	go hman.hmanMltHandler(hman.BallotNum.EpochNum)
 	log.Debugf("[HMAN]: Broadcasting heartbeats")
-	hman.Node.Broadcast(beat)
+	hman.Node.Broadcast(hman.Node.ID(), beat)
 }
 
 func (hman *HMan) HManFly() {
@@ -146,7 +146,7 @@ func (hman *HMan) HManFly() {
 
 func (hman *HMan) HandleBeat(m Beat) {
 	log.Debugf("[HMAN] Node %v received beat", hman.id)
-	hman.Node.Send(m.FromNode, BeatACK{
+	hman.Node.Send(hman.Node.ID(), m.FromNode, BeatACK{
 		FromNode:  hman.id,
 		ToNode:    m.FromNode,
 		BallotNum: m.BallotNum,
@@ -183,7 +183,7 @@ func (hman *HMan) HandleBeatACK(m BeatACK) {
 			// send this newly created list of live nodes in a BeatDecide message
 			// only to those nodes who responded with a BeatACK
 			for n := range hman.EntryMap[m.BallotNum.EpochNum].respondedNodes {
-				hman.Node.Send(n, BeatDecide{
+				hman.Node.Send(hman.Node.ID(), n, BeatDecide{
 					FromNode:  hman.id,
 					ToNode:    m.FromNode,
 					NodeList:  liveNodes,

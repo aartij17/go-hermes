@@ -86,7 +86,7 @@ func (n *node) recv() {
 		case Request:
 			m.c = make(chan Reply, 1)
 			go func(r Request) {
-				n.Send(r.NodeID, <-r.c)
+				n.Send(n.id, r.NodeID, <-r.c)
 			}(m)
 			n.MessageChan <- m
 			continue

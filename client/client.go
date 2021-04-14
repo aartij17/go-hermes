@@ -5,9 +5,11 @@ import (
 	"flag"
 	go_hermes "go-hermes"
 	"go-hermes/hermes"
+	"strconv"
 )
 
 var id = flag.String("id", "", "node id this client connects to")
+var zone = flag.String("zone", "", "zone id this client connects to")
 var algorithm = flag.String("algorithm", "", "Client API type [paxos, chain]")
 var load = flag.Bool("load", false, "Load K keys into DB")
 var master = flag.String("master", "", "Master address.")
@@ -51,7 +53,8 @@ func main() {
 	//}
 
 	d := new(db)
-	d.Client = hermes.NewClient(go_hermes.ID(*id))
+	zone_int, _ := strconv.Atoi(*zone)
+	d.Client = hermes.NewClient(go_hermes.ID(*id), zone_int)
 	//switch *algorithm {
 	//case "paxos":
 	//

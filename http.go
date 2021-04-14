@@ -34,7 +34,9 @@ func (n *node) handleRoot(w http.ResponseWriter, r *http.Request) {
 	var cmd Command
 	var err error
 	log.Debugf("received a request: %v", r)
+	log.Debugf("url path: %v", r.URL.Path)
 	if len(r.URL.Path) > 1 {
+		log.Debug("url path greater than 1")
 		i, err := strconv.Atoi(r.URL.Path[1:])
 		if err != nil {
 			http.Error(w, "invalid path", http.StatusBadRequest)
@@ -42,7 +44,7 @@ func (n *node) handleRoot(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		cmd.Key = Key(i)
-		if r.Method == http.MethodPost {
+		if r.Method == http.MethodPut {
 			body, err := ioutil.ReadAll(r.Body)
 			if err != nil {
 				log.Error("error reading request body", err)
@@ -68,7 +70,7 @@ func (n *node) handleRoot(w http.ResponseWriter, r *http.Request) {
 	n.MessageChan <- req
 	log.Debugf("receiving message into message chan")
 	reply := <-req.c
-	log.Debugf("writing back")
+	log.Debugf("writing back: %v", reply)
 	_, err = io.WriteString(w, string(reply.Value))
 	if err != nil {
 		log.Error(err)

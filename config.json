@@ -2,25 +2,37 @@
   "address": {
     "1.1": "tcp://127.0.0.1:8080",
     "1.2": "tcp://127.0.0.1:8081",
-    "1.3": "tcp://127.0.0.1:8082"
+    "1.3": "tcp://127.0.0.1:8082",
+    "1.4": "tcp://127.0.0.1:8083",
+    "1.5": "tcp://127.0.0.1:8084",
+    "1.6": "tcp://127.0.0.1:8085"
   },
   "http_address": {
     "1.1": "http://127.0.0.1:9090",
     "1.2": "http://127.0.0.1:9091",
-    "1.3": "http://127.0.0.1:9092"
+    "1.3": "http://127.0.0.1:9092",
+    "1.4": "http://127.0.0.1:9093",
+    "1.5": "http://127.0.0.1:9094",
+    "1.6": "http://127.0.0.1:9095"
   },
   "heartbeat_address": {
     "1:1": "tcp://127.0.0.1:7070",
     "1:2": "tcp://127.0.0.1:7071",
     "1:3": "tcp://127.0.0.1:7072"
   },
+  "policy": "majority",
+  "quorum": "majority",
+  "threshold": 3,
+  "thrifty": false,
+  "buffer_size": 1024,
+  "multiversion": false,
   "benchmark": {
-    "T": 60,
-    "N": 0,
+    "T": 0,
+    "N": 3,
     "K": 1000,
-    "W": 0.5,
+    "W": 1,
     "Throttle": 1000,
-    "Concurrency": 1,
+    "Concurrency": 5,
     "Distribution": "uniform",
     "LinearizabilityCheck": false,
     "Conflicts": 0,
@@ -33,8 +45,8 @@
     "Zipfian_v": 1,
     "Lambda": 0.01
   },
-  "heartbeat_interval": 20,
+  "heartbeat_interval": 1000,
   "chan_buffer_size": 1024,
-  "mlt": 7,
-  "failure_mlt": 2
+  "mlt": 4,
+  "failure_mlt": 30
 }

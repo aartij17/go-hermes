@@ -1,5 +1,8 @@
 package go_hermes
 
+import (
+	"go-hermes/log"
+)
 type Quorum struct {
 	size  int
 	acks  map[ID]bool
@@ -42,5 +45,6 @@ func (q *Quorum) All() bool {
 }
 
 func (q *Quorum) AllFromViewManagement(livenodes []ID) bool {
+	log.Debugf("size of quorum:: %v, size of livenodes: %v", q.size, len(livenodes))
 	return q.size >= len(livenodes)
 }

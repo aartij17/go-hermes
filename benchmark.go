@@ -250,6 +250,7 @@ func (b *Benchmark) worker(keys <-chan int, result chan<- time.Duration) {
 	var err error
 	for k := range keys {
 		op := new(operation)
+
 		if rand.Float64() < b.W {
 			v = rand.Int()
 			s = time.Now()

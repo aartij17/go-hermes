@@ -8,10 +8,10 @@ import (
 
 type Socket interface {
 	Crash(t int)
-	Send(to ID, m interface{})
+	Send(from ID, to ID, m interface{})
 	IsCrashed() bool
-	Broadcast(m interface{})
-	BroadcastToLiveNodes(m interface{}, ids []ID)
+	Broadcast(fromID ID, m interface{})
+	BroadcastToLiveNodes(fromID ID, m interface{}, ids []ID)
 	Recv() interface{}
 	Close()
 }
@@ -38,7 +38,7 @@ func NewSocket(id ID, addrs map[ID]string) Socket {
 	return socket
 }
 
-func (s *socket) Send(to ID, m interface{}) {
+func (s *socket) Send(fromID ID, to ID, m interface{}) {
 	log.Debugf("node %s send message to %+v to %+v", s.id, m, to)
 	if s.crash {
 		log.Infof("node %s crashed, cannot send message %+v to %v", s.id, m, to)
@@ -72,6 +72,13 @@ func (s *socket) Send(to ID, m interface{}) {
 		s.lock.Unlock()
 		log.Debugf("Released SLock")
 	}
+	//currentZone := fromID.Zone()
+	//toZone := to.Zone()
+	//if currentZone != toZone {
+	//	time.Sleep(4 * time.Millisecond)
+	//} else {
+	//	time.Sleep(1 * time.Millisecond)
+	//}
 	t.Send(m)
 }
 
@@ -85,21 +92,21 @@ func (s *socket) Recv() interface{} {
 	}
 }
 
-func (s *socket) Broadcast(m interface{}) {
+func (s *socket) Broadcast(fromID ID, m interface{}) {
 	for id := range s.addresses {
 		if id == s.id {
 			continue
 		}
-		s.Send(id, m)
+		s.Send(fromID, id, m)
 	}
 }
 
-func (s *socket) BroadcastToLiveNodes(m interface{}, ids []ID) {
+func (s *socket) BroadcastToLiveNodes(fromID ID, m interface{}, ids []ID) {
 	for _, id := range ids {
 		if id == s.id {
 			continue
 		}
-		s.Send(id, m)
+		s.Send(fromID, id, m)
 	}
 }
 
