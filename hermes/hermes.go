@@ -24,10 +24,12 @@ type Hermes struct {
 
 	entryLock sync.RWMutex
 	keyLock   sync.RWMutex
-	GenLock sync.RWMutex
+	GenLock   sync.RWMutex
+	//entryLog  *lib.CMap
 	entryLog  map[int]*Entry
 
 	HermesKeys      map[int]*go_hermes.KeyStruct
+	//HermesKeys      *lib.CMap
 	ReplyWhenCommit bool // use for optimisation
 	EpochId         int
 	timestamp       go_hermes.Timestamp
@@ -61,6 +63,8 @@ func (h *Hermes) HandleRequest(r go_hermes.Request) {
 			switch key.State {
 			case go_hermes.VALID_STATE:
 				newVersion := h.HermesKeys[int(r.Command.Key)].Ts.Version + 1
+				//newVersion := h.HermesKeys.Get(int(r.Command.Key)).(*go_hermes.KeyStruct).Ts.
+				//	Version + 1
 				r.KeyStruct = &go_hermes.KeyStruct{
 					Key: r.Command.Key,
 					Ts: go_hermes.Timestamp{
@@ -104,12 +108,15 @@ func (h *Hermes) CheckKeyState(r go_hermes.Request) (*go_hermes.KeyStruct, bool)
 	if exists {
 		return key, true
 	}
+	//exists := h.HermesKeys.Contains(int(r.Command.Key))
+	//if exists {
+	//	return h.HermesKeys.Get(int(r.Command.Key)).(*go_hermes.KeyStruct), true
+	//}
 	return nil, false
 }
 
 func (h *Hermes) broadcastRequest(r go_hermes.Request) {
 	log.Debugf("waiting for lock")
-
 
 	//------------------------
 	// TODO: Aarti: huge change
@@ -126,7 +133,13 @@ func (h *Hermes) broadcastRequest(r go_hermes.Request) {
 		Request:   r,
 		MltTicker: time.NewTicker(time.Duration(h.config.MLT) * time.Second),
 	}
+	//h.entryLog.Put(r.Epoch_ID, &Entry{
+	//		Quorum:    go_hermes.NewQuorum(),
+	//		Request:   r,
+	//		MltTicker: time.NewTicker(time.Duration(h.config.MLT) * time.Second),
+	//	})
 	h.entryLog[r.Epoch_ID].Quorum.ACK(h.ID())
+	//h.entryLog.Get(r.Epoch_ID).(*Entry).Quorum.ACK(h.ID())
 
 	INV_message := INV{
 		Key:        r.KeyStruct,
@@ -137,9 +150,9 @@ func (h *Hermes) broadcastRequest(r go_hermes.Request) {
 	//go h.coordinatorTicker(INV_message, r.Epoch_ID, r)
 	//h.entryLock.Lock()
 	//h.entryLog[r.Epoch_ID].Quorum.ACK(h.ID())
-	h.entryLock.Unlock()
-	log.Debugf("lock released")
 	//h.entryLock.Unlock()
+	log.Debugf("lock released")
+	h.entryLock.Unlock()
 	log.Debugf("Key %v added to dictionary", r.KeyStruct.Key)
 	h.HermesKeys[int(r.Command.Key)] = r.KeyStruct
 	log.Debugf("Broadcasting INV")

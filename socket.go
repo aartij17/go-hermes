@@ -66,8 +66,8 @@ func (s *socket) Send(fromID ID, to ID, m interface{}) {
 			log.Error(err)
 			return
 		}
+		log.Debugf("Trying to take SLock")
 		s.lock.Lock()
-		log.Debugf("Took SLock")
 		s.nodes[to] = t
 		s.lock.Unlock()
 		log.Debugf("Released SLock")
