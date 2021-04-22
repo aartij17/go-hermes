@@ -3,6 +3,7 @@ package go_hermes
 import (
 	"go-hermes/log"
 )
+
 type Quorum struct {
 	size  int
 	acks  map[ID]bool

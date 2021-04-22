@@ -35,8 +35,8 @@ type HTTPClient struct {
 	ID     ID  // client id use the same id as servers in local site
 	N      int // total number of nodes
 	LocalN int // number of nodes in local zone
-	Zone int
-	CID int // command id
+	Zone   int
+	CID    int // command id
 	*http.Client
 }
 
@@ -48,7 +48,7 @@ func NewHTTPClient(id ID, zone int) *HTTPClient {
 		Addrs:  config.Addrs,
 		HTTP:   config.HTTPAddrs,
 		Client: &http.Client{},
-		Zone: zone,
+		Zone:   zone,
 	}
 	if id != "" {
 		i := 0

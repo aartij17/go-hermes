@@ -63,7 +63,7 @@ func (r *Replica) readInProgress(m go_hermes.Request) (go_hermes.Value, bool) {
 	key, exists := r.Hermes.CheckKeyState(m)
 	if exists && key.State == go_hermes.VALID_STATE {
 		//log.Info(r.HermesKeys)
-		return []byte(r.HermesKeys[int(m.Command.Key)].Value), false
+		return []byte(r.HermesKeys.Get(int(m.Command.Key)).(*go_hermes.KeyStruct).Value), false
 	} else if exists {
 		log.Infof("key %v exists but not in VALID state", m.Command.Key)
 		//time.Sleep(5 * time.Second)

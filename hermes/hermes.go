@@ -2,8 +2,8 @@ package hermes
 
 import (
 	go_hermes "go-hermes"
+	"go-hermes/lib"
 	"go-hermes/log"
-	"sync"
 	"time"
 )
 
@@ -20,16 +20,10 @@ type Hermes struct {
 
 	quorum *go_hermes.Quorum
 
-	Q func(*go_hermes.Quorum) bool
+	Q        func(*go_hermes.Quorum) bool
+	entryLog *lib.CMap
 
-	entryLock sync.RWMutex
-	keyLock   sync.RWMutex
-	GenLock   sync.RWMutex
-	//entryLog  *lib.CMap
-	entryLog  map[int]*Entry
-
-	HermesKeys      map[int]*go_hermes.KeyStruct
-	//HermesKeys      *lib.CMap
+	HermesKeys      *lib.CMap
 	ReplyWhenCommit bool // use for optimisation
 	EpochId         int
 	timestamp       go_hermes.Timestamp
@@ -42,8 +36,8 @@ func NewHermes(n go_hermes.Node, options ...func(*Hermes)) *Hermes {
 		Q:               func(q *go_hermes.Quorum) bool { return q.All() },
 		ReplyWhenCommit: false,
 		EpochId:         0,
-		entryLog:        make(map[int]*Entry),
-		HermesKeys:      make(map[int]*go_hermes.KeyStruct),
+		entryLog:        lib.NewCMap(), //make(map[int]*Entry),
+		HermesKeys:      lib.NewCMap(), //make(map[int]*go_hermes.KeyStruct),
 		config:          go_hermes.GetConfig(),
 		timestamp:       go_hermes.Timestamp{},
 	}
@@ -62,9 +56,8 @@ func (h *Hermes) HandleRequest(r go_hermes.Request) {
 		if exists {
 			switch key.State {
 			case go_hermes.VALID_STATE:
-				newVersion := h.HermesKeys[int(r.Command.Key)].Ts.Version + 1
-				//newVersion := h.HermesKeys.Get(int(r.Command.Key)).(*go_hermes.KeyStruct).Ts.
-				//	Version + 1
+				newVersion := h.HermesKeys.Get(int(r.Command.Key)).(*go_hermes.KeyStruct).Ts.
+					Version + 1
 				r.KeyStruct = &go_hermes.KeyStruct{
 					Key: r.Command.Key,
 					Ts: go_hermes.Timestamp{
@@ -101,17 +94,11 @@ func (h *Hermes) HandleRequest(r go_hermes.Request) {
 
 func (h *Hermes) CheckKeyState(r go_hermes.Request) (*go_hermes.KeyStruct, bool) {
 	log.Debugf("trying to take lock")
-	h.keyLock.RLock()
 	log.Debugf("lock taken")
-	defer h.keyLock.RUnlock()
-	key, exists := h.HermesKeys[int(r.Command.Key)]
+	exists := h.HermesKeys.Contains(int(r.Command.Key))
 	if exists {
-		return key, true
+		return h.HermesKeys.Get(int(r.Command.Key)).(*go_hermes.KeyStruct), true
 	}
-	//exists := h.HermesKeys.Contains(int(r.Command.Key))
-	//if exists {
-	//	return h.HermesKeys.Get(int(r.Command.Key)).(*go_hermes.KeyStruct), true
-	//}
 	return nil, false
 }
 
@@ -126,20 +113,12 @@ func (h *Hermes) broadcastRequest(r go_hermes.Request) {
 	//h.GenLock.Unlock()
 	// -----------------------
 
-	h.entryLock.Lock()
-	log.Debugf("lock taken")
-	h.entryLog[r.Epoch_ID] = &Entry{
+	h.entryLog.Put(r.Epoch_ID, &Entry{
 		Quorum:    go_hermes.NewQuorum(),
 		Request:   r,
 		MltTicker: time.NewTicker(time.Duration(h.config.MLT) * time.Second),
-	}
-	//h.entryLog.Put(r.Epoch_ID, &Entry{
-	//		Quorum:    go_hermes.NewQuorum(),
-	//		Request:   r,
-	//		MltTicker: time.NewTicker(time.Duration(h.config.MLT) * time.Second),
-	//	})
-	h.entryLog[r.Epoch_ID].Quorum.ACK(h.ID())
-	//h.entryLog.Get(r.Epoch_ID).(*Entry).Quorum.ACK(h.ID())
+	})
+	h.entryLog.Get(r.Epoch_ID).(*Entry).Quorum.ACK(h.ID())
 
 	INV_message := INV{
 		Key:        r.KeyStruct,
@@ -148,58 +127,39 @@ func (h *Hermes) broadcastRequest(r go_hermes.Request) {
 		FromNodeID: h.Node.ID(),
 	}
 	//go h.coordinatorTicker(INV_message, r.Epoch_ID, r)
-	//h.entryLock.Lock()
-	//h.entryLog[r.Epoch_ID].Quorum.ACK(h.ID())
-	//h.entryLock.Unlock()
-	log.Debugf("lock released")
-	h.entryLock.Unlock()
 	log.Debugf("Key %v added to dictionary", r.KeyStruct.Key)
-	h.HermesKeys[int(r.Command.Key)] = r.KeyStruct
+	h.HermesKeys.Put(int(r.Command.Key), r.KeyStruct)
 	log.Debugf("Broadcasting INV")
 	h.Broadcast(h.Node.ID(), INV_message) //, Hman.LiveNodes)
 }
 
 func (h *Hermes) HandleACK(m ACK) {
-	// TODO: Contact membership service for all live replicas
-	log.Debugf("trying to take lock")
-	h.entryLock.RLock()
-	log.Debugf("got lock")
-	_, exists := h.entryLog[m.Epoch_id]
-	h.entryLock.RUnlock()
+	exists := h.entryLog.Contains(m.Epoch_id)
 
 	if exists {
-		log.Debugf("trying to take lock")
-		h.entryLock.Lock()
-		log.Debugf("got lock")
-		h.entryLog[m.Epoch_id].Quorum.ADD()
-		h.entryLock.Unlock()
-		if h.entryLog[m.Epoch_id].Quorum.AllFromViewManagement(Hman.LiveNodes) {
+		h.entryLog.Get(m.Epoch_id).(*Entry).Quorum.ADD()
+		if h.entryLog.Get(m.Epoch_id).(*Entry).Quorum.AllFromViewManagement(Hman.LiveNodes) {
 			log.Info("Quorum found, Broadcasting VAL")
 			h.BroadcastToLiveNodes(h.Node.ID(), VAL{
 				Key:        m.Key,
 				Epoch_id:   m.Epoch_id,
 				FromNodeID: h.Node.ID(),
 			}, Hman.LiveNodes)
-			log.Debugf("trying to take lock")
-			h.keyLock.Lock()
-			log.Debugf("trying to take lock")
-			h.HermesKeys[int(m.Key.Key)].State = go_hermes.VALID_STATE
-			h.keyLock.Unlock()
-			//h.changeKeyState(int(m.Key.Key), go_hermes.VALID_STATE)
-			log.Debugf("trying to take LOCK")
-			h.entryLock.Lock()
-			log.Debugf("got LOCK")
-			h.entryLog[m.Epoch_id].Quorum.Reset()
+			key := h.HermesKeys.Get(int(m.Key.Key)).(*go_hermes.KeyStruct)
+			key.State = go_hermes.VALID_STATE
+			h.HermesKeys.Put(int(m.Key.Key), key)
+			h.entryLog.Get(m.Epoch_id).(*Entry).Quorum.Reset()
 			// stop the timer for this write
-			h.entryLog[m.Epoch_id].MltTicker.Stop()
-			h.entryLock.Unlock()
-			h.entryLog[m.Epoch_id].Request.Reply(go_hermes.Reply{
-				Command:   h.entryLog[m.Epoch_id].Request.Command,
-				Value:     h.entryLog[m.Epoch_id].Request.Value,
-				Timestamp: h.entryLog[m.Epoch_id].Request.Timestamp,
+			h.entryLog.Get(m.Epoch_id).(*Entry).MltTicker.Stop()
+			eLog := h.entryLog.Get(m.Epoch_id).(*Entry)
+			eLog.Request.Reply(go_hermes.Reply{
+				Command:   eLog.Request.Command,
+				Value:     eLog.Request.Value,
+				Timestamp: eLog.Request.Timestamp,
 				Err:       nil,
 			})
-			h.entryLog[m.Epoch_id].Request = go_hermes.Request{}
+			eLog.Request = go_hermes.Request{}
+			h.entryLog.Put(m.Epoch_id, eLog)
 		} else {
 			log.Debugf("Haven't received all ACKs back")
 		}
@@ -210,34 +170,24 @@ func (h *Hermes) HandleACK(m ACK) {
 
 //// follower handlers
 func (h *Hermes) HandleINV(m INV) {
-	log.Debugf("trying to take lock")
-	h.keyLock.Lock()
-	log.Debugf("got lock")
-	_, exists := h.HermesKeys[int(m.Key.Key)]
+	exists := h.HermesKeys.Contains(int(m.Key.Key))
+	hKey := h.HermesKeys.Get(int(m.Key.Key)).(*go_hermes.KeyStruct)
 	if exists {
 		if h.isRecvdTimestampGreater(m.Key) {
-
-			h.HermesKeys[int(m.Key.Key)].State = go_hermes.INVALID_STATE
-			//h.changeKeyState(int(m.Key.Key), go_hermes.INVALID_STATE)
-			// update key's timestamp and value
-			h.HermesKeys[int(m.Key.Key)].Ts = m.Key.Ts
-			h.HermesKeys[int(m.Key.Key)].Value = m.Value
+			hKey.State = go_hermes.INVALID_STATE
+			hKey.Ts = m.Key.Ts
+			hKey.Value = m.Value
 		}
 	} else {
 		log.Debugf("Key %v added to dictionary", m.Key)
-		h.HermesKeys[int(m.Key.Key)] = m.Key
+		h.HermesKeys.Put(int(m.Key.Key), m.Key)
 	}
-	h.keyLock.Unlock()
-	log.Debugf("trying to take lock")
-	h.entryLock.Lock()
-	log.Debugf("got lock")
-	h.entryLog[m.Epoch_id] = &Entry{
+	h.entryLog.Put(m.Epoch_id, &Entry{
 		Quorum:    go_hermes.NewQuorum(),
 		Request:   go_hermes.Request{},
-		Timestamp: m.Key.Ts,
 		MltTicker: time.NewTicker(time.Duration(h.config.MLT) * time.Second),
-	}
-	h.entryLock.Unlock()
+		Timestamp: m.Key.Ts,
+	})
 	// start the timer for this epoch
 	//go h.followerTicker(m)
 
@@ -253,44 +203,29 @@ func (h *Hermes) HandleVAL(m VAL) {
 	log.Debugf("checking equal timestamps for Epoch ID: %v, Key: %v", m.Epoch_id, m.Key.Key)
 	if h.checkEqualTimestamps(m) {
 		log.Debugf("received val, transitioning the key back to valid state")
-		log.Debugf("trying to take lock")
-		h.keyLock.Lock()
-		log.Debugf("got lock")
-		h.HermesKeys[int(m.Key.Key)].State = go_hermes.VALID_STATE
-		//h.changeKeyState(int(m.Key.Key), go_hermes.VALID_STATE)
-		h.keyLock.Unlock()
-		log.Debugf("trying to take lock")
-		h.entryLock.Lock()
-		log.Debugf("got lock")
-		h.entryLog[m.Epoch_id].MltTicker.Stop()
-		h.entryLock.Unlock()
+		k := h.HermesKeys.Get(int(m.Key.Key)).(*go_hermes.KeyStruct)
+		k.State = go_hermes.VALID_STATE
+		h.HermesKeys.Put(int(m.Key.Key), k)
+		e := h.entryLog.Get(m.Epoch_id).(*Entry)
+		e.MltTicker.Stop()
+		h.entryLog.Put(m.Epoch_id, e)
 	}
-	// follower received the VAL, stop the timer
-	log.Debugf("something with ticker:: %v, entryLog:: %v", m, h.entryLog[m.Epoch_id])
 }
 
 /////////// Time stamp checks
 func (h *Hermes) checkEqualTimestamps(m VAL) bool {
-	log.Debugf("trying to take lock")
-	h.entryLock.RLock()
-	log.Debugf("got the lock")
-	defer h.entryLock.RUnlock()
-	if _, OK := h.entryLog[m.Epoch_id]; !OK {
+	exists := h.entryLog.Contains(m.Epoch_id)
+	if !exists {
 		log.Info("can't check equal timestamps, nothing to do")
 		return false
 	}
-	log.Debug(h.entryLog[m.Epoch_id])
-	log.Debug(h.entryLog[m.Epoch_id].Timestamp.Version)
-	log.Debug(m.Key.Ts.C_id)
-	log.Debug(m.Key.Ts.Version)
-	return h.entryLog[m.Epoch_id].Timestamp.Version == m.Key.Ts.Version &&
-		h.entryLog[m.Epoch_id].Timestamp.C_id == m.Key.Ts.C_id
-	//return (h.HermesKeys[int(m.Key)].Ts.C_id == m.Ts.C_id) &&
-	//	(h.HermesKeys[int(m.Key)].Ts.Version == m.Ts.Version)
+	e := h.entryLog.Get(m.Epoch_id).(*Entry)
+	return e.Timestamp.Version == m.Key.Ts.Version &&
+		e.Timestamp.C_id == m.Key.Ts.C_id
 }
 
 func (h *Hermes) isRecvdTimestampGreater(m *go_hermes.KeyStruct) bool {
-	currTs := h.HermesKeys[int(m.Key)].Ts
+	currTs := h.HermesKeys.Get(int(m.Key)).(*go_hermes.KeyStruct).Ts
 	recdTs := m.Ts
 
 	if recdTs.C_id == currTs.C_id {
@@ -305,25 +240,19 @@ func (h *Hermes) isRecvdTimestampGreater(m *go_hermes.KeyStruct) bool {
 
 //// Ticker functions for message losses
 func (h *Hermes) coordinatorTicker(msg INV, epochId int, r go_hermes.Request) {
-	h.entryLock.RLock()
-	tick := h.entryLog[epochId].MltTicker.C
-	h.entryLock.RUnlock()
+	tick := h.entryLog.Get(epochId).(*Entry).MltTicker.C
 	for {
 		select {
 		case <-tick:
 			// ticker went off, which means there is a loss of message somewhere. Retrigger
 			// the write once again
-			h.entryLock.Lock()
-			h.entryLog[r.Epoch_ID] = &Entry{
+			h.entryLog.Put(r.Epoch_ID, &Entry{
 				Quorum:    go_hermes.NewQuorum(),
 				Request:   r,
 				MltTicker: time.NewTicker(time.Duration(h.config.MLT) * time.Second),
-			}
-			h.entryLog[r.Epoch_ID].Quorum.ACK(h.ID())
-			h.entryLock.Unlock()
-			h.keyLock.Lock()
-			h.HermesKeys[int(r.Command.Key)] = r.KeyStruct
-			h.keyLock.Unlock()
+			})
+			h.entryLog.Get(r.Epoch_ID).(*Entry).Quorum.ACK(h.ID())
+			h.HermesKeys.Put(int(r.Command.Key), r.KeyStruct)
 			h.Broadcast(h.Node.ID(), msg)
 		default:
 			continue
@@ -332,25 +261,21 @@ func (h *Hermes) coordinatorTicker(msg INV, epochId int, r go_hermes.Request) {
 }
 
 func (h *Hermes) followerTicker(m INV) {
+	e := h.entryLog.Get(m.Epoch_id).(*Entry)
 	for {
 		select {
-		case <-h.entryLog[m.Epoch_id].MltTicker.C:
+		case <-e.MltTicker.C:
 			if h.Node.IsCrashed() {
 				log.Debugf("its a crashed node, no need to replay")
-				h.entryLog[m.Epoch_id].MltTicker.Stop()
-				h.entryLock.Lock()
-				delete(h.entryLog, m.Epoch_id)
-				h.entryLock.Unlock()
+				e.MltTicker.Stop()
+				h.entryLog.Delete(m.Epoch_id)
 				return
 			}
 			log.Infof("Follower ticker for node %v timed out, changing to replay state: %v",
 				h.Node.ID(), m)
-			log.Debugf("trying to take lock")
-			h.keyLock.Lock()
-			log.Debugf("got lock")
-			h.HermesKeys[int(m.Key.Key)].State = go_hermes.REPLAY_STATE
-			//h.changeKeyState(int(m.Key.Key), go_hermes.REPLAY_STATE)
-			h.keyLock.Unlock()
+			k := h.HermesKeys.Get(int(m.Key.Key)).(*go_hermes.KeyStruct)
+			k.State = go_hermes.REPLAY_STATE
+			h.HermesKeys.Put(int(m.Key.Key), k)
 			h.Broadcast(h.Node.ID(), INV{
 				Key:        m.Key,
 				Epoch_id:   m.Epoch_id,
@@ -362,11 +287,3 @@ func (h *Hermes) followerTicker(m INV) {
 		}
 	}
 }
-
-//// other utils
-//func (h *Hermes) changeKeyState(key int, state string) {
-//	//h.entryLock.Lock()
-//	//defer h.entryLock.Unlock()
-//
-//	h.HermesKeys[key].State = state
-//}
